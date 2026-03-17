@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: dental_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    ports:
+      - "3307:3306"  # Map to different host port to avoid conflicts
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - dental_network
+
+  backend:
+    build: ./backend
+    container_name: dental_backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      OTP_EXPIRE_MINUTES: 5
+    ports:
+      - "8000:8000"
+    networks:
+      - dental_network
+
+  frontend:
+    build: ./frontend
+    container_name: dental_frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      REACT_APP_API_URL: http://localhost:8000  # or http://backend:8000 if using internal network with proxy
+    ports:
+      - "3000:80"
+    networks:
+      - dental_network
+
+volumes:
+  db_data:
+
+networks:
+  dental_network:
+    driver: bridge
